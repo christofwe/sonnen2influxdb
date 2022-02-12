@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  sonnen2influxdb:
+    build: .
+    container_name: sonnen2influxdb
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - INFLUXDB_HOST=$INFLUXDB_HOST
+      - INFLUXDB_PORT=$INFLUXDB_PORT
+      - INFLUXDB_USER=$INFLUXDB_USER
+      - INFLUXDB_PASS=$INFLUXDB_PASS
+      - INFLUXDB_DB_NAME=$INFLUXDB_DB_NAME
+      - SONNEN_API_IP=$SONNEN_API_IP
+      - SONNEN_API_TOKEN=$SONNEN_API_TOKEN
+    command: '/bin/sh -c "while sleep $UPDATE_INTERVAL; do python /app/sonnen2influxdb.py; done"'
