@@ -15,4 +15,5 @@ services:
       - INFLUXDB_DB_NAME=$INFLUXDB_DB_NAME
       - SONNEN_API_IP=$SONNEN_API_IP
       - SONNEN_API_TOKEN=$SONNEN_API_TOKEN
+      - TZ=$TZ
     command: '/bin/sh -c "while sleep $UPDATE_INTERVAL; do python /app/sonnen2influxdb.py; done"'
