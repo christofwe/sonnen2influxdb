@@ -1,10 +1,11 @@
-import json
 import os
+import json
 import requests
 from requests.auth import HTTPBasicAuth
 
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
+import pytz
 
 from influxdb import InfluxDBClient
 
@@ -17,14 +18,17 @@ INFLUXDB_DB_NAME = os.environ['INFLUXDB_DB_NAME']
 SONNEN_API_IP = os.environ['SONNEN_API_IP']
 SONNEN_API_TOKEN = os.environ['SONNEN_API_TOKEN']
 
-sonnen_api_base_url = f"http://{SONNEN_API_IP}/api/v2"
-sonnen_headers = {'Auth-Token': SONNEN_API_TOKEN}
+
+tz = pytz.timezone(os.environ['TZ'])
+local = tz.localize(datetime.now())
+timestamp = local.strftime("%Y-%m-%dT%H:%M:%S%Z%z")
 
 influx_client = InfluxDBClient(host=INFLUXDB_HOST, port=INFLUXDB_PORT, username=INFLUXDB_USER, password=INFLUXDB_PASS)
 influx_client.switch_database(INFLUXDB_DB_NAME)
+influx_body = []
 
-local = datetime.now()
-timestamp = local.strftime("%Y-%m-%dT%H:%M:%SZ")
+sonnen_api_base_url = f"http://{SONNEN_API_IP}/api/v2"
+sonnen_headers = {'Auth-Token': SONNEN_API_TOKEN}
 
 try:
   sonnen_response_status = requests.get(f"{sonnen_api_base_url}/status", headers=sonnen_headers)
@@ -45,78 +49,80 @@ try:
   values_latest_volts = []
   values_latest_ic_status = ["statebms", "statecorecontrolmodule", "stateinverter"]
 
-  json_body = []
+  timestamp_status = tz.localize(datetime.fromisoformat(sonnen_metrics_status['Timestamp']))
+  timestamp_latestdata = tz.localize(datetime.fromisoformat(sonnen_metrics_latestdata['Timestamp']))
+
   for value_status_watt in values_status_watts:
     item = {
       "measurement": value_status_watt,
       "tags": {
       },
-      "time": timestamp,
+      "time": timestamp_status.isoformat(),
       "fields": {
         "watts": sonnen_metrics_status[value_status_watt]
       }
     }
-    json_body.append(item)
+    influx_body.append(item)
 
   for value_status_volt in values_status_volts:
     item = {
       "measurement": value_status_volt,
       "tags": {
       },
-      "time": timestamp,
+      "time": timestamp_status.isoformat(),
       "fields": {
         "volts": sonnen_metrics_status[value_status_volt]
       }
     }
-    json_body.append(item)
+    influx_body.append(item)
 
   for value_status_percent in values_status_percent:
     item = {
       "measurement": value_status_percent,
       "tags": {
       },
-      "time": timestamp,
+      "time": timestamp_status.isoformat(),
       "fields": {
         "percent": sonnen_metrics_status[value_status_percent]
       }
     }
-    json_body.append(item)
+    influx_body.append(item)
 
   for value_latest_watt in values_latest_watts:
     item = {
       "measurement": value_latest_watt,
       "tags": {
       },
-      "time": timestamp,
+      "time": timestamp_latestdata.isoformat(),
       "fields": {
         "watts": sonnen_metrics_latestdata[value_latest_watt]
       }
     }
-    json_body.append(item)
+    influx_body.append(item)
 
   for value_latest_volt in values_latest_volts:
     item = {
       "measurement": value_latest_volt,
       "tags": {
       },
-      "time": timestamp,
+      "time": timestamp_latestdata.isoformat(),
       "fields": {
         "volts": sonnen_metrics_latestdata[value_latest_volt]
       }
     }
-    json_body.append(item)
+    influx_body.append(item)
 
   for value_latest_ic_status in values_latest_ic_status:
     item = {
       "measurement": value_latest_ic_status,
       "tags": {
       },
-      "time": timestamp,
+      "time": timestamp_latestdata.isoformat(),
       "fields": {
         "value": sonnen_metrics_latestdata['ic_status'][value_latest_ic_status]
       }
     }
-    json_body.append(item)
+    influx_body.append(item)
 
 
   if sonnen_metrics_latestdata['ic_status']['Eclipse Led']['Pulsing White']:
@@ -134,14 +140,14 @@ try:
     "measurement": "status_eclipse",
       "tags": {
       },
-      "time": timestamp,
+      "time": timestamp_latestdata.isoformat(),
       "fields": {
         "value": current_status_eclipse
       }
   }
-  json_body.append(status_eclipse)
+  influx_body.append(status_eclipse)
 
-  influxdb_write = influx_client.write_points(json_body)
+  influxdb_write = influx_client.write_points(influx_body)
   print(f"{timestamp} influx_write: {influxdb_write}")
 
 except requests.exceptions.HTTPError as error:
