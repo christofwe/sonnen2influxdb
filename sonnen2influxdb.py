@@ -41,7 +41,7 @@ try:
   sonnen_metrics_status = json.loads(sonnen_response_status.text)
   sonnen_metrics_latestdata = json.loads(sonnen_response_latestdata.text)
 
-  values_status_watts = ["Consumption_W", "Consumption_Avg", "GridFeedIn_W", "Pac_total_W", "Production_W", "RemainingCapacity_W"]
+  values_status_watts = ["Consumption_W", "Consumption_Avg", "GridFeedIn_W", "Pac_total_W", "Production_W"]
   values_status_volts = ["Fac", "Uac", "Ubat"]
   values_status_percent = ["RSOC", "USOC"]
 
